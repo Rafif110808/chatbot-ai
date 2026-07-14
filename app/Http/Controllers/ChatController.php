@@ -9,6 +9,7 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Services\AiService;
 use Illuminate\Http\JsonResponse;
+use App\Models\AiSetting;
 
 class ChatController extends Controller
 {
@@ -74,7 +75,18 @@ class ChatController extends Controller
             ->get()
             ->toArray();
 
-        $aiResponse = $this->aiService->generateResponse($request->message, $history);
+        $setting = AiSetting::firstOrCreate(
+            ['user_id' => auth()->id()],
+            [
+                'temperature' => 0.7,
+                'max_tokens' => 2048,
+                'system_prompt' => null,
+                'language' => 'indonesia',
+                'answer_length' => 'medium',
+            ]
+        );
+
+        $aiResponse = $this->aiService->generateResponse($request->message, $history, $setting);
 
         $aiMessage = $conversation->messages()->create([
             'role' => 'assistant',

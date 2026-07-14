@@ -34,3 +34,53 @@
     color: #fff;
     background: rgba(255, 255, 255, 0.2);
 }
+
+.prose {
+    --tw-prose-bullets: #d97706;
+}
+
+.prose p {
+    margin-top: 0.25em;
+    margin-bottom: 0.25em;
+}
+
+.prose p:first-child {
+    margin-top: 0;
+}
+
+.prose ul,
+.prose ol {
+    margin-top: 0.25em;
+    margin-bottom: 0.25em;
+}
+
+.prose li {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.chat-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #d4d4d8 transparent;
+}
+
+.dark .chat-scrollbar {
+    scrollbar-color: #52525b transparent;
+}
+
+.chat-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.chat-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.chat-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #d4d4d8;
+    border-radius: 3px;
+}
+
+.dark .chat-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #52525b;
+}

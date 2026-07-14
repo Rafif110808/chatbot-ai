@@ -5,7 +5,7 @@
         <textarea x-model="newMessage"
                   @keydown.enter.prevent="sendMessage()"
                   placeholder="Ketik pesan ke Rafif Assistant..."
-                  class="flex-1 resize-none rounded-xl border-stone-200 dark:border-stone-600 bg-stone-50 dark:bg-stone-800 focus:border-amber-400 focus:ring-amber-400 placeholder-stone-400 dark:placeholder-stone-500 text-stone-700 dark:text-stone-200 px-4 py-3 text-sm"
+                  class="flex-1 resize-none rounded-xl border-stone-200 dark:border-stone-600 bg-stone-50 dark:bg-stone-800 focus:border-amber-400 focus:ring-amber-400 placeholder-stone-400 dark:placeholder-stone-500 text-stone-700 dark:text-stone-200 px-4 py-3.5 text-[15px] leading-relaxed"
                   rows="1"
                   x-ref="messageInput"
                   :disabled="isLoading">

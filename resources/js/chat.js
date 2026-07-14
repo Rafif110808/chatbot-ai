@@ -24,6 +24,14 @@ function chatApp() {
         isLoading: false,
         sidebarOpen: true,
         editingTitle: null,
+        settingsOpen: false,
+        settingsForm: {
+            temperature: 0.7,
+            max_tokens: 2048,
+            system_prompt: '',
+            language: 'indonesia',
+            answer_length: 'medium',
+        },
 
         init() {
             this.loadConversations();
@@ -183,6 +191,45 @@ function chatApp() {
 
             axios.patch(`/api/conversations/${conv.id}`, { title: newTitle })
                 .catch(() => {});
+        },
+
+        openSettings() {
+            this.settingsOpen = true;
+            this.loadSettings();
+        },
+
+        closeSettings() {
+            this.settingsOpen = false;
+        },
+
+        loadSettings() {
+            if (typeof axios === 'undefined') return;
+
+            axios.get('/api/settings')
+                .then(res => {
+                    this.settingsForm = {
+                        temperature: res.data.temperature,
+                        max_tokens: res.data.max_tokens,
+                        system_prompt: res.data.system_prompt || '',
+                        language: res.data.language,
+                        answer_length: res.data.answer_length,
+                    };
+                })
+                .catch(() => {});
+        },
+
+        saveSettings() {
+            if (typeof axios === 'undefined') return;
+
+            axios.put('/api/settings', this.settingsForm)
+                .then(res => {
+                    this.closeSettings();
+                    alert(res.data.message || 'Pengaturan berhasil disimpan.');
+                })
+                .catch(err => {
+                    const msg = err.response?.data?.message || 'Gagal menyimpan pengaturan.';
+                    alert(msg);
+                });
         },
 
         toggleSidebar() {

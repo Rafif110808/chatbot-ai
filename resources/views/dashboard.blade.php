@@ -7,5 +7,7 @@
             @include('chat.chat-area')
             @include('chat.message-input')
         </div>
+
+        @include('chat.ai-settings-modal')
     </div>
 </x-app-layout>

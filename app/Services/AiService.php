@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use App\Models\AiSetting;
 
 class AiService
 {
@@ -16,13 +17,13 @@ class AiService
         $this->model = config('services.groq.model');
     }
 
-    public function generateResponse(string $message, array $history = []): string
+    public function generateResponse(string $message, array $history = [], ?AiSetting $setting = null): string
     {
         if (empty($this->apiKey)) {
             return '⚠️ API Key Groq belum dikonfigurasi. Tambahkan GROQ_API_KEY di file .env';
         }
 
-        $messages = $this->buildMessages($message, $history);
+        $messages = $this->buildMessages($message, $history, $setting);
 
         try {
             $response = Http::timeout(30)
@@ -33,8 +34,8 @@ class AiService
                 ->post('https://api.groq.com/openai/v1/chat/completions', [
                     'model' => $this->model,
                     'messages' => $messages,
-                    'temperature' => 0.7,
-                    'max_tokens' => 2048,
+                    'temperature' => $setting?->temperature ?? 0.7,
+                    'max_tokens' => $setting?->max_tokens ?? 2048,
                 ]);
 
             if ($response->successful()) {
@@ -66,16 +67,42 @@ class AiService
         }
     }
 
-    protected function buildMessages(string $message, array $history): array
+    protected function buildMessages(string $message, array $history, ?AiSetting $setting = null): array
     {
-        $systemContent = 'Kamu adalah Rafif Assistant, asisten AI pribadi yang ramah, membantu, dan berbahasa Indonesia. Jawab dengan jelas, ramah, dan informatif. Gunakan bahasa Indonesia yang baik dan natural.';
+        $language = $setting?->language ?? 'indonesia';
+        $answerLength = $setting?->answer_length ?? 'medium';
+        $customPrompt = $setting?->system_prompt;
 
-        $messages = [
-            [
-                'role' => 'system',
-                'content' => $systemContent,
-            ],
-        ];
+        // Bahasa instruction
+        $langInstruction = $language === 'english'
+            ? 'Answer in English.'
+            : 'Jawab dalam Bahasa Indonesia.';
+
+        // Panjang jawaban instruction
+        $lengthInstruction = match ($answerLength) {
+            'short' => $language === 'english'
+                ? 'Answer briefly (1-2 sentences).'
+                : 'Jawab secara singkat (1-2 kalimat).',
+            'detailed' => $language === 'english'
+                ? 'Answer in detail and depth.'
+                : 'Jawab secara detail dan mendalam.',
+            default => $language === 'english'
+                ? 'Answer with moderate length (1-2 paragraphs).'
+                : 'Jawab dengan panjang sedang (1-2 paragraf).',
+        };
+
+        // Default system prompt + language + length instruction
+        $systemContent = $language === 'english'
+            ? 'You are Rafif Assistant, a friendly and helpful personal AI assistant. Answer clearly, kindly, and informatively.'
+            : 'Kamu adalah Rafif Assistant, asisten AI pribadi yang ramah, membantu, dan berbahasa Indonesia. Jawab dengan jelas, ramah, dan informatif. Gunakan bahasa Indonesia yang baik dan natural.';
+
+        $systemContent .= "\n\n$langInstruction\n$lengthInstruction";
+
+        if ($customPrompt) {
+            $systemContent .= "\n\nInstruksi tambahan:\n$customPrompt";
+        }
+
+        $messages = [['role' => 'system', 'content' => $systemContent]];
 
         foreach ($history as $msg) {
             $messages[] = [
@@ -84,10 +111,7 @@ class AiService
             ];
         }
 
-        $messages[] = [
-            'role' => 'user',
-            'content' => $message,
-        ];
+        $messages[] = ['role' => 'user', 'content' => $message];
 
         return $messages;
     }

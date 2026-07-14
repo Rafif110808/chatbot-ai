@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\AiSettingController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -24,6 +25,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/conversations/{conversation}/messages', [ChatController::class, 'show']);
         Route::post('/conversations/{conversation}/messages', [ChatController::class, 'sendMessage']);
         Route::delete('/conversations/{conversation}', [ChatController::class, 'destroy']);
+        Route::get('/settings', [AiSettingController::class, 'show']);
+        Route::put('/settings', [AiSettingController::class, 'update']);
     });
 });
 
