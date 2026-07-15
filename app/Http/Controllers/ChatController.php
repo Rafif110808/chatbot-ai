@@ -9,6 +9,7 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Services\AiService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use App\Models\AiSetting;
 
 class ChatController extends Controller
@@ -22,6 +23,26 @@ class ChatController extends Controller
         $conversations = Conversation::where('user_id', auth()->id())
             ->latest()
             ->get();
+
+        return response()->json($conversations);
+    }
+
+    public function search(Request $request): JsonResponse
+    {
+        $keyword = $request->input('q');
+
+        $conversations = Conversation::where('user_id', auth()->id())
+            ->when($keyword, function ($query) use ($keyword) {
+                $query->where(function ($q) use ($keyword) {
+                    $q->where('title', 'like', "%{$keyword}%")
+                      ->orWhereHas('messages', function ($mq) use ($keyword) {
+                          $mq->where('content', 'like', "%{$keyword}%");
+                      });
+                });
+            })
+            ->latest()
+            ->get()
+            ->loadCount('messages');
 
         return response()->json($conversations);
     }
@@ -87,6 +108,59 @@ class ChatController extends Controller
         );
 
         $aiResponse = $this->aiService->generateResponse($request->message, $history, $setting);
+
+        $aiMessage = $conversation->messages()->create([
+            'role' => 'assistant',
+            'content' => $aiResponse,
+        ]);
+
+        return response()->json($aiMessage, 201);
+    }
+
+    public function regenerate(Conversation $conversation): JsonResponse
+    {
+        if ($conversation->user_id !== auth()->id()) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $lastAiMessage = $conversation->messages()
+            ->where('role', 'assistant')
+            ->latest()
+            ->first();
+
+        if (!$lastAiMessage) {
+            return response()->json(['message' => 'Tidak ada pesan AI untuk diregenerate'], 400);
+        }
+
+        $lastAiMessage->delete();
+
+        $lastUserMessage = $conversation->messages()
+            ->where('role', 'user')
+            ->latest()
+            ->first();
+
+        if (!$lastUserMessage) {
+            return response()->json(['message' => 'Tidak ada pesan user'], 400);
+        }
+
+        $history = $conversation->messages()
+            ->oldest()
+            ->where('id', '!=', $lastUserMessage->id)
+            ->get()
+            ->toArray();
+
+        $setting = AiSetting::firstOrCreate(
+            ['user_id' => auth()->id()],
+            [
+                'temperature' => 0.7,
+                'max_tokens' => 2048,
+                'system_prompt' => null,
+                'language' => 'indonesia',
+                'answer_length' => 'medium',
+            ]
+        );
+
+        $aiResponse = $this->aiService->generateResponse($lastUserMessage->content, $history, $setting);
 
         $aiMessage = $conversation->messages()->create([
             'role' => 'assistant',

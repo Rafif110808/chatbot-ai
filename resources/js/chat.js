@@ -24,6 +24,8 @@ function chatApp() {
         isLoading: false,
         sidebarOpen: true,
         editingTitle: null,
+        searchQuery: '',
+        searchTimeout: null,
         settingsOpen: false,
         settingsForm: {
             temperature: 0.7,
@@ -42,6 +44,13 @@ function chatApp() {
 
             this.$watch('messages', () => {
                 this.$nextTick(() => this.scrollToBottom());
+            });
+
+            this.$watch('searchQuery', (val) => {
+                if (this.searchTimeout) clearTimeout(this.searchTimeout);
+                this.searchTimeout = setTimeout(() => {
+                    this.searchConversations(val);
+                }, 300);
             });
 
             this.$watch('isLoading', () => {
@@ -166,6 +175,49 @@ function chatApp() {
             });
         },
 
+        searchConversations(keyword) {
+            if (typeof axios === 'undefined') return;
+
+            if (!keyword.trim()) {
+                this.loadConversations();
+                return;
+            }
+
+            axios.get(`/api/conversations/search?q=${encodeURIComponent(keyword)}`)
+                .then(res => {
+                    this.conversations = res.data;
+                })
+                .catch(() => {});
+        },
+
+        regenerateResponse(index) {
+            if (!this.activeConversation || this.isLoading) return;
+
+            const aiMessage = this.messages[index];
+            if (!aiMessage || aiMessage.role !== 'assistant') return;
+
+            this.isLoading = true;
+
+            axios.post(`/api/conversations/${this.activeConversation}/regenerate`)
+                .then(res => {
+                    this.messages[index] = {
+                        ...res.data,
+                        content: this.renderMarkdown(res.data.content),
+                    };
+                    this.$nextTick(() => this.scrollToBottom());
+                })
+                .catch(err => {
+                    const msg = err.response?.data?.message || 'Gagal meregenerate.';
+                    this.messages[index] = {
+                        ...this.messages[index],
+                        content: `<p class="text-red-500">${msg}</p>`,
+                    };
+                })
+                .finally(() => {
+                    this.isLoading = false;
+                });
+        },
+
         deleteConversation(id) {
             if (!confirm('Hapus percakapan ini?')) return;
 
@@ -175,6 +227,7 @@ function chatApp() {
                     if (this.activeConversation === id) {
                         this.activeConversation = null;
                         this.messages = [];
+                        this.searchQuery = '';
                     }
                 })
                 .catch(() => {});

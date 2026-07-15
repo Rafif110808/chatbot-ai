@@ -19,11 +19,13 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::prefix('api')->group(function () {
+        Route::get('/conversations/search', [ChatController::class, 'search']);
         Route::get('/conversations', [ChatController::class, 'index']);
         Route::post('/conversations', [ChatController::class, 'store']);
         Route::patch('/conversations/{conversation}', [ChatController::class, 'update']);
         Route::get('/conversations/{conversation}/messages', [ChatController::class, 'show']);
         Route::post('/conversations/{conversation}/messages', [ChatController::class, 'sendMessage']);
+        Route::post('/conversations/{conversation}/regenerate', [ChatController::class, 'regenerate']);
         Route::delete('/conversations/{conversation}', [ChatController::class, 'destroy']);
         Route::get('/settings', [AiSettingController::class, 'show']);
         Route::put('/settings', [AiSettingController::class, 'update']);
